@@ -1,77 +1,45 @@
 import Order from "../models/Order.js";
-import Product from "../models/Product.js";
 
-// Crear una orden y actualizar stock
+// Función para generar el ID de 5 dígitos
+const generateOrderId = () => {
+  return Math.floor(10000 + Math.random() * 90000).toString(); // Genera un ID único de 5 dígitos
+};
+
 export const createOrder = async (req, res) => {
   try {
-    const { products, totalAmount, paymentMethod, shippingAddress } = req.body;
+    const { userId, customerData, shippingAddress, city, postalCode, paymentMethod, cart } = req.body;
 
-    // Verificar stock de cada producto
-    for (let item of products) {
-      const product = await Product.findById(item.product);
-      if (!product) return res.status(404).json({ message: `Producto ${item.product} no encontrado` });
+    // Generar un ID único para el pedido
+    const orderId = generateOrderId();
 
-      if (product.stock < item.quantity) {
-        return res.status(400).json({ message: `Stock insuficiente para ${product.name}` });
-      }
-    }
+    // Calcular el total del pedido
+    const totalAmount = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
-    // Descontar stock
-    for (let item of products) {
-      const product = await Product.findById(item.product);
-      product.stock -= item.quantity;
-      await product.save();
-    }
+    // Crear el pedido
+    const order = new Order({
+      orderId,
+      user: userId,
+      customerData,
+      shippingAddress,
+      city,
+      postalCode,
+      paymentMethod,
+      products: cart.map((item) => ({
+        product: item._id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+      })),
+      totalAmount,
+    });
 
-    // Crear la orden
-    const newOrder = new Order({ user: req.user._id, products, totalAmount, paymentMethod, shippingAddress });
-    await newOrder.save();
+    // Guardar el pedido
+    await order.save();
 
-    res.status(201).json(newOrder);
+    // Enviar una respuesta de éxito con el ID del pedido
+    res.status(201).json({ message: "Pedido creado con éxito", orderId });
   } catch (error) {
-    res.status(500).json({ message: "Error al procesar la orden" });
-  }
-};
-
-// Obtener todas las órdenes
-export const getOrders = async (req, res) => {
-  try {
-    const orders = await Order.find().populate("user").populate("products.product");
-    res.json(orders);
-  } catch (error) {
-    res.status(500).json({ message: "Error al obtener órdenes" });
-  }
-};
-
-// Obtener una orden por ID
-export const getOrderById = async (req, res) => {
-  try {
-    const order = await Order.findById(req.params.id).populate("user").populate("products.product");
-    if (!order) return res.status(404).json({ message: "Orden no encontrada" });
-    res.json(order);
-  } catch (error) {
-    res.status(500).json({ message: "Error al obtener la orden" });
-  }
-};
-
-// Eliminar una orden y reponer stock
-export const deleteOrder = async (req, res) => {
-  try {
-    const order = await Order.findById(req.params.id);
-    if (!order) return res.status(404).json({ message: "Orden no encontrada" });
-
-    // Reponer stock
-    for (let item of order.products) {
-      const product = await Product.findById(item.product);
-      if (product) {
-        product.stock += item.quantity;
-        await product.save();
-      }
-    }
-
-    await order.deleteOne();
-    res.json({ message: "Orden eliminada y stock repuesto" });
-  } catch (error) {
-    res.status(500).json({ message: "Error al eliminar orden" });
+    console.error("Error al crear el pedido:", error);
+    res.status(500).json({ message: "Error al crear el pedido" });
   }
 };

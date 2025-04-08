@@ -1,34 +1,21 @@
-import React from "react";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import { useState, useEffect } from "react";
-import ProductList from "./pages/ProductList";
+
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './App.css'
-import Checkout from "./pages/Checkout";
-import ThankYouPage from "./pages/ThankYouPage";
+import UserLayout from './components/Layout/UserLayout'
+import Home from './pages/Home'
 
-function App() {
-  const [cart, setCart] = useState(() => {
-    // Cargar el carrito desde localStorage al iniciar la app
-    const savedCart = localStorage.getItem("cart");
-    return savedCart ? JSON.parse(savedCart) : [];
-  });
-
-  useEffect(() => {
-    // Guardar en localStorage cada vez que cambie el carrito
-    localStorage.setItem("cart", JSON.stringify(cart));
-  }, [cart]);
-
+const App = () => {
   return (
-    <Router>
-      <div className="App">
-        <Routes>
-          <Route path="/" element={<ProductList />} />
-          <Route path="/checkout" element={<Checkout cart={cart}/>}/>
-          <Route path="/thank-you" element={<ThankYouPage/>}/>
-        </Routes>
-      </div>
-    </Router>
-  );
+    <BrowserRouter>
+      <Routes>
+        <Route path='/' element={<UserLayout/>}>
+        <Route index element={<Home/>}/>
+        {/*User Layout */} 
+        </Route>
+        <Route>{/*Admin Layout */}  </Route>
+      </Routes>
+    </BrowserRouter>
+  )
 }
 
-export default App;
+export default App
